@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path"
 	"runtime"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -25,6 +27,10 @@ type Formatter struct {
 	// number in `file` string. It will be automatically added as a separate
 	// field.
 	CallerPrettyfier func(*runtime.Frame) (function string, file string)
+
+	// TrimFilenamePrefix is a prefix to remove from filename. This is done
+	// before invoking CallerPrettyfier.
+	TrimFilenamePrefix string
 
 	// PrettyPrint will indent all json logs
 	PrettyPrint bool
@@ -64,6 +70,7 @@ func (f *Formatter) Format(entry *log.Entry) ([]byte, error) {
 		l := map[string]interface{}{}
 		funcVal := entry.Caller.Function
 		fileVal := entry.Caller.File
+		fileVal = strings.TrimPrefix(fileVal, f.TrimFilenamePrefix)
 		if f.CallerPrettyfier != nil {
 			funcVal, fileVal = f.CallerPrettyfier(entry.Caller)
 		}
@@ -113,4 +120,22 @@ func (f *Formatter) Format(entry *log.Entry) ([]byte, error) {
 	}
 
 	return b.Bytes(), nil
+}
+
+// SourceFileLocation returns path to directory containing the source file from
+// where it was called. Returns an empty string on error.
+// Intended to be used like this:
+//
+//   logrus.SetFormatter(&appengine.Formatter{
+//     TrimFilenamePrefix: appengine.SourceFileLocation(),
+//   })
+func SourceFileLocation() string {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return ""
+	}
+	// path.Dir would also clean up the path, potentially preventing us from
+	// successfully comparing it against other source filenames. To avoid that
+	// we simply remove base filename from the end and return the rest as is.
+	return strings.TrimSuffix(file, path.Base(file))
 }

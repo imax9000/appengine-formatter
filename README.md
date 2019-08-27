@@ -23,7 +23,9 @@ func main() {
 	// ...
 
 	log.SetReportCaller(true)  // optional, but highly recommended
-	log.SetFormatter(&appengine.Formatter{})
+	log.SetFormatter(&appengine.Formatter{
+		TrimFilenamePrefix: appengine.SourceFileLocation(),
+	})
 
 	log.Printf("Listening on port %s", port)
 	// ...
