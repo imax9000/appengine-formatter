@@ -78,15 +78,15 @@ func (f *Formatter) Format(entry *log.Entry) ([]byte, error) {
 	}
 
 	for k, v := range entry.Data {
+		if _, set := data[k]; set {
+			k = "fields." + k
+		}
 		switch v := v.(type) {
 		case error:
 			// Otherwise errors are ignored by `encoding/json`
 			// https://github.com/sirupsen/logrus/issues/137
 			data[k] = v.Error()
 		default:
-			if _, set := data[k]; set {
-				k = "fields." + k
-			}
 			data[k] = v
 		}
 	}
