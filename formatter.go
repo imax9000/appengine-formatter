@@ -83,9 +83,15 @@ func (f *Formatter) Format(entry *log.Entry) ([]byte, error) {
 		}
 		switch v := v.(type) {
 		case error:
-			// Otherwise errors are ignored by `encoding/json`
-			// https://github.com/sirupsen/logrus/issues/137
-			data[k] = v.Error()
+			// We know that the value is an error and .Error() will produce a
+			// human-readable string, but let's do one extra step and give it
+			// a chance to produce more structured value.
+			switch v := v.(type) {
+			case json.Marshaler:
+				data[k] = v
+			default:
+				data[k] = v.Error()
+			}
 		default:
 			data[k] = v
 		}
